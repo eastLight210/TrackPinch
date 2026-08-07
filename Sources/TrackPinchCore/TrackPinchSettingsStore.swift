@@ -8,15 +8,21 @@ public struct TrackPinchSettings: Equatable {
     public var isEnabled: Bool
     public var sensitivity: Double
     public var modifiers: NSEvent.ModifierFlags
+    public var hasPresentedOnboarding: Bool
+    public var hasCompletedOnboarding: Bool
 
     public init(
         isEnabled: Bool = true,
         sensitivity: Double = defaultSensitivity,
-        modifiers: NSEvent.ModifierFlags = ModifierNormalizer.defaultGestureModifiers
+        modifiers: NSEvent.ModifierFlags = ModifierNormalizer.defaultGestureModifiers,
+        hasPresentedOnboarding: Bool = false,
+        hasCompletedOnboarding: Bool = false
     ) {
         self.isEnabled = isEnabled
         self.sensitivity = Self.clampedSensitivity(sensitivity)
         self.modifiers = Self.validModifiers(modifiers)
+        self.hasPresentedOnboarding = hasPresentedOnboarding
+        self.hasCompletedOnboarding = hasCompletedOnboarding
     }
 
     public static func clampedSensitivity(_ value: Double) -> Double {
@@ -39,6 +45,8 @@ public final class TrackPinchSettingsStore {
         static let isEnabled = "settings.isEnabled"
         static let sensitivity = "settings.sensitivity"
         static let modifiers = "settings.modifiers"
+        static let hasPresentedOnboarding = "onboarding.hasPresented"
+        static let hasCompletedOnboarding = "onboarding.hasCompleted"
     }
 
     private let defaults: UserDefaults
@@ -67,7 +75,13 @@ public final class TrackPinchSettingsStore {
         return TrackPinchSettings(
             isEnabled: isEnabled,
             sensitivity: sensitivity,
-            modifiers: modifiers
+            modifiers: modifiers,
+            hasPresentedOnboarding: defaults.bool(
+                forKey: Key.hasPresentedOnboarding
+            ),
+            hasCompletedOnboarding: defaults.bool(
+                forKey: Key.hasCompletedOnboarding
+            )
         )
     }
 
@@ -75,10 +89,20 @@ public final class TrackPinchSettingsStore {
         let normalized = TrackPinchSettings(
             isEnabled: settings.isEnabled,
             sensitivity: settings.sensitivity,
-            modifiers: settings.modifiers
+            modifiers: settings.modifiers,
+            hasPresentedOnboarding: settings.hasPresentedOnboarding,
+            hasCompletedOnboarding: settings.hasCompletedOnboarding
         )
         defaults.set(normalized.isEnabled, forKey: Key.isEnabled)
         defaults.set(normalized.sensitivity, forKey: Key.sensitivity)
         defaults.set(Int(normalized.modifiers.rawValue), forKey: Key.modifiers)
+        defaults.set(
+            normalized.hasPresentedOnboarding,
+            forKey: Key.hasPresentedOnboarding
+        )
+        defaults.set(
+            normalized.hasCompletedOnboarding,
+            forKey: Key.hasCompletedOnboarding
+        )
     }
 }

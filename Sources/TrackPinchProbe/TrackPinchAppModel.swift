@@ -14,6 +14,8 @@ final class TrackPinchAppModel: ObservableObject {
     @Published private(set) var isEnabled: Bool
     @Published private(set) var sensitivity: Double
     @Published private(set) var modifiers: NSEvent.ModifierFlags
+    @Published private(set) var hasPresentedOnboarding: Bool
+    @Published private(set) var hasCompletedOnboarding: Bool
     @Published private(set) var accessibilityTrusted = false
     @Published private(set) var inputListeningGranted = false
     @Published private(set) var eventTapHealth: EventTapProbe.Health = .stopped
@@ -46,6 +48,8 @@ final class TrackPinchAppModel: ObservableObject {
         isEnabled = settings.isEnabled
         sensitivity = settings.sensitivity
         modifiers = settings.modifiers
+        hasPresentedOnboarding = settings.hasPresentedOnboarding
+        hasCompletedOnboarding = settings.hasCompletedOnboarding
     }
 
     var operationalState: OperationalState {
@@ -77,6 +81,10 @@ final class TrackPinchAppModel: ObservableObject {
         case .starting:
             return "Starting…"
         }
+    }
+
+    var permissionsReady: Bool {
+        accessibilityTrusted && inputListeningGranted
     }
 
     var modifierGlyphs: String {
@@ -115,6 +123,20 @@ final class TrackPinchAppModel: ObservableObject {
 
     func resetSensitivity() {
         setSensitivity(TrackPinchSettings.defaultSensitivity)
+    }
+
+    func markOnboardingPresented() {
+        guard !hasPresentedOnboarding else { return }
+        hasPresentedOnboarding = true
+        settings.hasPresentedOnboarding = true
+        persist()
+    }
+
+    func completeOnboarding() {
+        guard permissionsReady, !hasCompletedOnboarding else { return }
+        hasCompletedOnboarding = true
+        settings.hasCompletedOnboarding = true
+        persist()
     }
 
     func toggleModifier(_ modifier: NSEvent.ModifierFlags) {

@@ -254,7 +254,7 @@ unsupported target, AX timeout, AX invalid element 및 permission revocation도 
 - physical end 후 300 ms 안에 momentum이 시작하지 않으면 `idle`로 전이한다.
 - drain 대기 중 새로운 matching physical `.mayBegin` 또는 `.began`이 오면 새 generation으로 즉시 capture를 시작하고 event를 소비한다.
 - drain 대기 중 새로운 nonmatching physical `.mayBegin` 또는 `.began`이 오면 이전 capture를 종료하고 새 event는 통과시킨다.
-- 종료 event 손실을 위한 recovery timeout은 마지막 소유 event로부터 5초다. timeout 시 pending work를 취소하고 `idle`로 fail-open한다.
+- `resizing` 또는 `swallowing`에서 종료 event가 손실된 경우를 위한 recovery timeout은 마지막 소유 event로부터 5초다. timeout 시 pending work를 취소하고 `idle`로 fail-open한 뒤, 현재 event를 새 입력으로 다시 판정한다.
 
 ### 9.6 Consume/pass decision table
 
@@ -368,16 +368,21 @@ AX 작업은 event-tap thread와 main thread에서 분리된 전용 serial execu
 
 새 capture는 AX trust, listen access, active tap creation 및 healthy tap을 모두 만족할 때만 가능하다.
 
+사용자가 저장한 enabled 설정과 실제 입력 소유 가능 상태는 분리한다. 권한 또는 tap health가 준비되지 않은 동안에는 enabled 설정을 보존하되 새 gesture를 소비하지 않는다. 이미 소유한 gesture 도중 조건이 사라지면 AX update만 취소하고 남은 physical sequence와 연결된 momentum을 drain한다.
+
 ### 13.2 Event tap recovery
 
 `tapDisabledByTimeout`을 받으면 다음과 같이 처리한다.
 
-1. capture와 pending AX work를 취소한다.
-2. 한 번 즉시 `CGEvent.tapEnable`을 시도한다.
-3. 10초 안에 timeout disable이 두 번 발생하면 `degraded`로 전이한다.
-4. degraded에서는 자동 retry하지 않고 메뉴의 `Retry Input Monitor`를 기다린다.
+1. 첫 timeout에서는 pending AX work만 취소하고 capture를 `swallowing`으로 전이해 이미 소유한 gesture의 tail이 원래 앱으로 새지 않게 한다.
+2. 한 번 즉시 `CGEvent.tapEnable`을 시도하고 `CGEvent.tapIsEnabled`가 true일 때만 health를 `running`으로 복구한다.
+3. tap이 없거나 실제 enable에 실패하면 capture를 해제하고 `degraded`로 전이한다.
+4. 10초 안에 timeout disable이 두 번 발생하면 capture를 해제하고 `degraded`로 전이한다.
+5. degraded에서는 자동 retry하지 않고 메뉴의 `Retry Input Monitor`를 기다린다.
 
 `tapDisabledByUserInput`을 받으면 즉시 degraded로 전이하며 자동 enable loop를 만들지 않는다.
+
+사용자 retry는 기존 event-tap thread의 실제 teardown 완료를 기다린 뒤 새 thread를 시작한다. 고정 지연으로 종료를 추정하지 않는다. 새 tap 설치도 `CGEvent.tapIsEnabled`가 true인 경우에만 `running`으로 게시한다.
 
 tap health가 불확실하거나 degraded인 동안 TrackPinch는 event를 소비하지 않는다.
 
@@ -404,6 +409,13 @@ AppKit `NSStatusItem`이 SwiftUI 설정 view를 담은 transient `NSPopover`를 
 - 접을 수 있는 runtime diagnostics와 AX resize test
 - Quit
 
+첫 실행에서는 설정 popover를 한 번 자동으로 표시하고 다음 2단계 onboarding을 제공한다.
+
+1. Accessibility와 Input Monitoring의 용도, 현재 승인 상태 및 Settings 진입
+2. modifier와 수평/수직/대각선 gesture 결과 안내
+
+onboarding을 완료하기 전에도 status toggle과 diagnostics에는 접근할 수 있다. 권한이 준비되지 않은 동안에는 TrackPinch가 새 scroll sequence를 소비하지 않는다.
+
 ### 14.2 설정 저장
 
 다음 값은 `UserDefaults`를 source of truth로 사용한다.
@@ -411,6 +423,8 @@ AppKit `NSStatusItem`이 SwiftUI 설정 view를 담은 transient `NSPopover`를 
 - enabled
 - modifier set
 - sensitivity
+- onboarding 최초 표시 여부
+- onboarding 완료 여부
 
 로그인 시 실행은 단순 Boolean만 저장하지 않는다.
 
@@ -504,6 +518,8 @@ fake `WindowController`/AX adapter로 다음을 검증한다.
 - modifier release 후 pending update 폐기
 - unsupported capture에서도 physical/momentum 전체 consume
 - set 성공/readback 실패 시 swallowing 전이
+- event-tap retry가 기존 thread teardown 완료 뒤 한 번만 재시작
+- 첫 timeout 복구 중 physical/momentum tail 소유권 유지
 
 ### 17.3 Signed-build manual QA
 

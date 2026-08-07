@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var frontmostAppTracker: FrontmostAppTracker!
+    private var refreshPermissionsOnTargetChange = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -31,18 +32,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         configureStatusItem()
         configurePopover()
 
-        refreshPermissions()
+        refreshPermissions(retryUnavailableMonitor: false)
         eventTapProbe.setConfiguredModifiers(appModel.modifiers)
         eventTapProbe.setSuppressionEnabled(appModel.isEnabled)
         axLiveResizeController.setSensitivity(appModel.sensitivity)
         eventTapProbe.start()
+        refreshPermissionsOnTargetChange = true
 
-        if CommandLine.arguments.contains("--show-popover") {
+        let shouldPresentOnboarding = !appModel.hasPresentedOnboarding
+        if shouldPresentOnboarding
+            || CommandLine.arguments.contains("--show-popover") {
             DispatchQueue.main.async { [weak self] in
                 guard let self, let button = self.statusItem.button else {
                     return
                 }
                 self.showPopover(relativeTo: button)
+                if shouldPresentOnboarding {
+                    self.appModel.markOnboardingPresented()
+                }
             }
         }
 
@@ -55,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         eventTapProbe.stop()
+        frontmostAppTracker.stop()
     }
 
     func popoverWillShow(_ notification: Notification) {
@@ -71,7 +79,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private func showPopover(relativeTo button: NSStatusBarButton) {
-        refreshPermissions()
         popover.show(
             relativeTo: button.bounds,
             of: button,
@@ -89,18 +96,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         frontmostAppTracker.onTargetChange = { [weak self] pid, appName in
             self?.eventTapProbe.setTargetPID(pid)
             self?.appModel.updateTarget(appName: appName)
+            if self?.refreshPermissionsOnTargetChange == true {
+                self?.refreshPermissions()
+            }
         }
 
         eventTapProbe.onSnapshot = { [weak self] snapshot in
-            MainActor.assumeIsolated {
-                self?.appModel.updateEventTap(snapshot)
-                self?.updateStatusItemAppearance()
-            }
+            self?.appModel.updateEventTap(snapshot)
+            self?.updateStatusItemAppearance()
         }
         axLiveResizeController.onStatus = { [weak self] status in
-            MainActor.assumeIsolated {
-                self?.appModel.updateLiveResize(status: status)
-            }
+            self?.appModel.updateLiveResize(status: status)
         }
 
         appModel.onEnabledChanged = { [weak self] enabled in
@@ -184,15 +190,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         image?.isTemplate = true
         button.image = image
         button.toolTip = "TrackPinch — \(appModel.statusTitle)"
+        button.setAccessibilityValue(appModel.statusTitle)
     }
 
-    private func refreshPermissions() {
-        appModel.updatePermissions(PermissionProbe.state)
+    private func refreshPermissions(
+        retryUnavailableMonitor: Bool = true
+    ) {
+        let state = PermissionProbe.state
+        appModel.updatePermissions(state)
+        eventTapProbe.setPermissionState(
+            accessibilityTrusted: state.accessibilityTrusted,
+            inputListeningGranted: state.inputListeningGranted
+        )
+        if retryUnavailableMonitor,
+           state.accessibilityTrusted,
+           state.inputListeningGranted {
+            switch eventTapProbe.snapshot().health {
+            case .stopped, .unavailable:
+                eventTapProbe.retry()
+            case .starting, .running, .degraded:
+                break
+            }
+        }
         updateStatusItemAppearance()
     }
 
     private func checkPermissionsAndRetry() {
-        refreshPermissions()
+        refreshPermissions(retryUnavailableMonitor: false)
         if appModel.accessibilityTrusted,
            appModel.inputListeningGranted {
             appModel.updatePermissionAction("Permissions granted")
@@ -203,6 +227,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private func requestPermissionsAndRetry() {
         let requestedState = PermissionProbe.request()
         appModel.updatePermissions(requestedState)
+        eventTapProbe.setPermissionState(
+            accessibilityTrusted: requestedState.accessibilityTrusted,
+            inputListeningGranted: requestedState.inputListeningGranted
+        )
         let missingPane = PermissionProbe.nextMissingPane(for: requestedState)
         let openedSettings = missingPane.map(PermissionProbe.openSettings) ?? false
 

@@ -4,7 +4,9 @@ import Foundation
 import OSLog
 import TrackPinchCore
 
-final class AXLiveResizeController {
+final class AXLiveResizeController: @unchecked Sendable {
+    typealias StatusHandler = @MainActor @Sendable (String) -> Void
+
     private struct Session {
         let generation: UInt64
         let window: AXUIElement
@@ -60,9 +62,9 @@ final class AXLiveResizeController {
     private var session: Session?
     private var sensitivity: Double = TrackPinchSettings.defaultSensitivity
     private var lastStatusPublishTime: TimeInterval = 0
-    private var onStatusStorage: ((String) -> Void)?
+    private var onStatusStorage: StatusHandler?
 
-    var onStatus: ((String) -> Void)? {
+    var onStatus: StatusHandler? {
         get { callbackLock.withLock { onStatusStorage } }
         set { callbackLock.withLock { onStatusStorage = newValue } }
     }
@@ -265,7 +267,7 @@ final class AXLiveResizeController {
         logger.log(level: level, "\(message, privacy: .public)")
         let callback = callbackLock.withLock { onStatusStorage }
         guard let callback else { return }
-        DispatchQueue.main.async {
+        Task { @MainActor in
             callback(message)
         }
     }

@@ -3,8 +3,8 @@ import CoreGraphics
 import Foundation
 import OSLog
 
-final class AXResizeProbe {
-    struct Result {
+final class AXResizeProbe: @unchecked Sendable {
+    struct Result: Sendable {
         let message: String
         let succeeded: Bool
     }
@@ -20,11 +20,11 @@ final class AXResizeProbe {
 
     func run(
         pid: pid_t,
-        completion: @escaping (Result) -> Void
+        completion: @escaping @MainActor @Sendable (Result) -> Void
     ) {
         queue.async { [logger] in
             let result = Self.perform(pid: pid, logger: logger)
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 completion(result)
             }
         }

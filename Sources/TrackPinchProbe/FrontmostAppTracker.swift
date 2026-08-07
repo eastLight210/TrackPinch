@@ -36,11 +36,12 @@ final class FrontmostAppTracker {
         }
     }
 
-    deinit {
+    func stop() {
         if let activationObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(
                 activationObserver
             )
+            self.activationObserver = nil
         }
     }
 

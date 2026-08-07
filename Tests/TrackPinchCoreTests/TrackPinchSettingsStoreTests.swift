@@ -28,6 +28,8 @@ final class TrackPinchSettingsStoreTests: XCTestCase {
             settings.modifiers,
             ModifierNormalizer.defaultGestureModifiers
         )
+        XCTAssertFalse(settings.hasPresentedOnboarding)
+        XCTAssertFalse(settings.hasCompletedOnboarding)
     }
 
     func testPersistsSettings() {
@@ -35,7 +37,9 @@ final class TrackPinchSettingsStoreTests: XCTestCase {
         let expected = TrackPinchSettings(
             isEnabled: false,
             sensitivity: 1.7,
-            modifiers: [.control, .shift]
+            modifiers: [.control, .shift],
+            hasPresentedOnboarding: true,
+            hasCompletedOnboarding: true
         )
 
         store.save(expected)

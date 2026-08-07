@@ -21,8 +21,12 @@ struct TrackPinchPopoverView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 12) {
-                    gestureCard
-                    permissionCard
+                    if model.hasCompletedOnboarding {
+                        gestureCard
+                        permissionCard
+                    } else {
+                        TrackPinchOnboardingView(model: model)
+                    }
                     diagnostics
                 }
                 .padding(14)
@@ -61,7 +65,7 @@ struct TrackPinchPopoverView: View {
                 "Enable TrackPinch",
                 isOn: Binding(
                     get: { model.isEnabled },
-                    set: model.setEnabled
+                    set: { model.setEnabled($0) }
                 )
             )
             .labelsHidden()
@@ -84,7 +88,7 @@ struct TrackPinchPopoverView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text("Hold the selected keys and move two fingers to resize the active window.")
+                Text("Hold the selected keys and move two fingers. Horizontal movement changes width; vertical movement changes height.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -115,7 +119,7 @@ struct TrackPinchPopoverView: View {
                 Slider(
                     value: Binding(
                         get: { model.sensitivity },
-                        set: model.setSensitivity
+                        set: { model.setSensitivity($0) }
                     ),
                     in: TrackPinchSettings.sensitivityRange,
                     step: 0.1
@@ -162,6 +166,11 @@ struct TrackPinchPopoverView: View {
                     isGranted: model.inputListeningGranted,
                     action: model.openInputMonitoringSettings
                 )
+
+                Text("Only modifier and scroll events are observed. Typed keys are not recorded.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if !model.accessibilityTrusted || !model.inputListeningGranted {
                     Button("Grant Missing Permissions") {
@@ -272,6 +281,7 @@ private struct ModifierKeyButton: View {
         .help(option.name)
         .accessibilityLabel("\(option.name) modifier")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -347,7 +357,7 @@ private struct DiagnosticRow: View {
     }
 }
 
-private struct SettingsCard<Content: View>: View {
+struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
