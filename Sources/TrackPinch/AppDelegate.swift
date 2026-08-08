@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
+    private var onboardingWindowController: TrackPinchOnboardingWindowController?
     private var frontmostAppTracker: FrontmostAppTracker!
     private var refreshPermissionsOnTargetChange = false
 
@@ -45,15 +46,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         let shouldPresentOnboarding = !appModel.hasPresentedOnboarding
         if shouldPresentOnboarding
-            || CommandLine.arguments.contains("--show-popover") {
+            || CommandLine.arguments.contains("--show-onboarding") {
             DispatchQueue.main.async { [weak self] in
-                guard let self, let button = self.statusItem.button else {
-                    return
-                }
+                self?.showOnboardingWindow(
+                    markAsPresented: shouldPresentOnboarding
+                )
+            }
+        } else if CommandLine.arguments.contains("--show-popover") {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let button = self.statusItem.button else { return }
                 self.showPopover(relativeTo: button)
-                if shouldPresentOnboarding {
-                    self.appModel.markOnboardingPresented()
-                }
             }
         }
 
@@ -133,6 +135,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         appModel.onRefreshPermissions = { [weak self] in
             self?.checkPermissionsAndRetry()
         }
+        appModel.onShowOnboarding = { [weak self] in
+            self?.showOnboardingWindow()
+        }
         appModel.onRetryEventTap = { [weak self] in
             self?.retryEventTapIfPermitted()
         }
@@ -168,6 +173,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             width: PopoverSizePolicy.width,
             height: PopoverSizePolicy.idealHeight
         )
+    }
+
+    private func showOnboardingWindow(markAsPresented: Bool = false) {
+        refreshPermissions()
+
+        if onboardingWindowController == nil {
+            onboardingWindowController = TrackPinchOnboardingWindowController(
+                model: appModel,
+                onFinish: { [weak self] in
+                    self?.finishOnboarding()
+                }
+            )
+        }
+
+        if markAsPresented {
+            appModel.markOnboardingPresented()
+        }
+
+        onboardingWindowController?.present(
+            on: statusItem.button?.window?.screen
+        )
+    }
+
+    private func finishOnboarding() {
+        appModel.completeOnboarding()
+        guard appModel.hasCompletedOnboarding else { return }
+
+        onboardingWindowController?.close()
+        guard let button = statusItem.button else { return }
+        showPopover(relativeTo: button)
     }
 
     private func resizePopoverToFitScreen(

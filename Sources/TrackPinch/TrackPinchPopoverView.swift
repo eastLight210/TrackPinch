@@ -25,7 +25,7 @@ struct TrackPinchPopoverView: View {
                         gestureCard
                         permissionCard
                     } else {
-                        TrackPinchOnboardingView(model: model)
+                        setupReminderCard
                     }
                     diagnostics
                 }
@@ -189,6 +189,30 @@ struct TrackPinchPopoverView: View {
         }
     }
 
+    private var setupReminderCard: some View {
+        SettingsCard {
+            VStack(alignment: .leading, spacing: 11) {
+                Label("Finish setting up TrackPinch", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+
+                Text(
+                    model.permissionsReady
+                        ? "Accessibility is ready. Learn the resize gesture and finish setup."
+                        : "Allow Accessibility access, then learn the resize gesture in the setup guide."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+                Button("Open Setup Guide") {
+                    model.showOnboarding()
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+
     private var diagnostics: some View {
         SettingsCard {
             DisclosureGroup(isExpanded: $diagnosticsExpanded) {
@@ -241,6 +265,15 @@ struct TrackPinchPopoverView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
             Spacer()
+            Button("Setup Guide") {
+                model.showOnboarding()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+
+            Divider()
+                .frame(height: 13)
+
             Button("Quit TrackPinch") {
                 model.quit()
             }
