@@ -19,7 +19,7 @@ struct TrackPinchPopoverView: View {
             header
             Divider()
 
-            ScrollView(showsIndicators: false) {
+            ScrollView {
                 VStack(spacing: 12) {
                     if model.hasCompletedOnboarding {
                         gestureCard
@@ -35,7 +35,8 @@ struct TrackPinchPopoverView: View {
             Divider()
             footer
         }
-        .frame(width: 370, height: 560)
+        .frame(width: PopoverSizePolicy.width)
+        .frame(maxHeight: .infinity)
         .background(.regularMaterial)
     }
 
@@ -161,24 +162,28 @@ struct TrackPinchPopoverView: View {
                     isGranted: model.accessibilityTrusted,
                     action: model.openAccessibilitySettings
                 )
-                PermissionRow(
-                    title: "Input Monitoring",
-                    isGranted: model.inputListeningGranted,
-                    action: model.openInputMonitoringSettings
-                )
 
                 Text("Only modifier and scroll events are observed. Typed keys are not recorded.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if !model.accessibilityTrusted || !model.inputListeningGranted {
-                    Button("Grant Missing Permissions") {
-                        model.requestPermissions()
+                if !model.accessibilityTrusted {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(
+                            "Set Up Accessibility registers TrackPinch with macOS; enable its switch when prompted."
+                        )
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        Button("Set Up Accessibility") {
+                            model.requestPermissions()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.regular)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.regular)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
         }
@@ -190,7 +195,7 @@ struct TrackPinchPopoverView: View {
                 VStack(alignment: .leading, spacing: 9) {
                     DiagnosticRow(title: "Target", value: model.targetAppName)
                     DiagnosticRow(
-                        title: "Input monitor",
+                        title: "Event tap",
                         value: model.eventTapHealth.description
                     )
                     DiagnosticRow(title: "Capture", value: model.captureState)
@@ -210,6 +215,7 @@ struct TrackPinchPopoverView: View {
                         Button("Retry Monitor") {
                             model.retryEventTap()
                         }
+                        .disabled(!model.accessibilityTrusted)
                         Button("Test Resize") {
                             model.runAXProbe()
                         }
@@ -331,8 +337,9 @@ private struct PermissionRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Button("Open Settings", action: action)
+                Button("Settings…", action: action)
                     .controlSize(.small)
+                    .help("Use if the macOS permission request does not appear")
             }
         }
     }

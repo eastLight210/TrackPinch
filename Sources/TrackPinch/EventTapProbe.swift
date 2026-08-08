@@ -68,7 +68,6 @@ final class EventTapProbe: @unchecked Sendable {
     private var health: Health = .stopped
     private var suppressionEnabled = false
     private var accessibilityTrusted = false
-    private var inputListeningGranted = false
     private var configuredModifiers = ModifierNormalizer.defaultGestureModifiers
     private var lastScrollEvent = "No scroll observed"
     private var lastModifierEvent = "No modifier observed"
@@ -161,15 +160,11 @@ final class EventTapProbe: @unchecked Sendable {
         publish(force: true)
     }
 
-    func setPermissionState(
-        accessibilityTrusted: Bool,
-        inputListeningGranted: Bool
-    ) {
+    func setAccessibilityTrusted(_ accessibilityTrusted: Bool) {
         lock.withLock {
             self.accessibilityTrusted = accessibilityTrusted
-            self.inputListeningGranted = inputListeningGranted
         }
-        if !accessibilityTrusted || !inputListeningGranted {
+        if !accessibilityTrusted {
             scheduleResizeStop(reason: "Required permission unavailable")
         }
         publish(force: true)
@@ -375,7 +370,6 @@ final class EventTapProbe: @unchecked Sendable {
             (
                 suppressionEnabled,
                 accessibilityTrusted,
-                inputListeningGranted,
                 targetPID,
                 configuredModifiers,
                 health
@@ -383,15 +377,14 @@ final class EventTapProbe: @unchecked Sendable {
         }
         let isConfiguredModifier = ModifierNormalizer.matches(
             effectiveModifierFlags,
-            configured: configuration.4
+            configured: configuration.3
         )
         let suppressionIsEnabled = configuration.0
-        let candidatePID = configuration.3
+        let candidatePID = configuration.2
         let runtimeIsOperational = TrackPinchOperationGate.allowsCapture(
             userEnabled: suppressionIsEnabled,
             accessibilityTrusted: configuration.1,
-            inputListeningGranted: configuration.2,
-            eventTapHealthy: configuration.5 == .running
+            eventTapHealthy: configuration.4 == .running
         )
         let canBeginCapture = runtimeIsOperational
             && isConfiguredModifier

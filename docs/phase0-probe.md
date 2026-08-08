@@ -5,7 +5,6 @@
 TrackPinch 전체 기능을 구현하기 전에 현재 Mac에서 다음 capability를 실제 app bundle identity로 검증한다.
 
 - Accessibility trust와 AX focused-window size write
-- Input Monitoring listen access
 - active `CGEventTap` 생성
 - Control+Option+Command modifier chord와 precision scroll event 관찰
 - Control+Option+Command-modified scroll sequence 전체 suppression
@@ -54,15 +53,16 @@ Developer ID Application으로 서명된 경우 다음 명령은 build 후 Gatek
 
 앱 실행 후 menu bar의 TrackPinch resize icon을 눌러 설정 popover를 연다.
 
-1. `Grant Missing Permissions`를 선택한다.
-2. 아직 허용되지 않은 첫 번째 권한의 System Settings pane이 열린다.
-3. System Settings에서 TrackPinch를 허용한다.
-4. 다른 권한도 아직 허용되지 않았다면 `Grant Missing Permissions`를 다시 선택한다.
-5. 필요하면 각 권한 옆의 `Open Settings`로 해당 pane을 직접 연다.
-6. TrackPinch popover를 다시 열어 두 권한 상태를 확인한다.
-7. 필요하면 `Diagnostics`를 펼쳐 `Retry Monitor`를 선택한다.
+새 설치의 첫 실행만으로는 어떤 permission prompt도 나타나지 않아야 한다. TrackPinch는 Accessibility가 승인되기 전에는 event tap을 생성하지 않는다.
 
-권한 prompt는 비동기이고 TCC가 이미 판단한 app에는 다시 표시되지 않을 수 있다. 그래서 probe는 prompt API 호출 후에도 권한이 없으면 해당 System Settings pane을 직접 연다. 두 권한이 모두 허용되면 `Grant Missing Permissions` button은 popover에서 사라진다.
+1. `Set Up Accessibility`를 선택한다.
+2. TrackPinch가 Accessibility prompt를 요청하고 macOS privacy 목록에 앱을 등록한다.
+3. System Settings에서 TrackPinch switch를 켠 뒤 앱으로 돌아온다.
+4. TrackPinch popover를 다시 열어 Accessibility 상태와 event tap health를 확인한다.
+5. macOS가 prompt를 다시 표시하지 않을 때만 `Settings…`로 Accessibility pane을 직접 연다.
+6. 필요하면 `Diagnostics`를 펼쳐 `Retry Monitor`를 선택한다.
+
+Accessibility prompt는 비동기이고 TCC가 이미 판단한 app에는 다시 표시되지 않을 수 있다. TrackPinch는 prompt API 호출 직후 System Settings를 강제로 열지 않는다. Accessibility가 허용되면 event tap을 시작하고 `Set Up Accessibility` button은 popover에서 사라진다. Accessibility가 event listening도 허용하므로 Input Monitoring을 별도 권한이나 상태로 취급하지 않는다.
 
 ## Live resize와 input suppression probe
 

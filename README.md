@@ -9,7 +9,7 @@ window width, height, or both.
 
 ## Alpha status
 
-`v0.1.0-alpha.1` is an experimental preview intended to validate the core
+`v0.1.0-alpha.2` is an experimental preview intended to validate the core
 gesture, Accessibility behavior, and scroll suppression on real Macs. It is
 not the finished `v0.1.0` release.
 
@@ -24,12 +24,11 @@ first blocked launch.
 - macOS 14 or later
 - Apple Silicon or Intel Mac
 - Accessibility permission
-- Input Monitoring permission
 
 ## Install the alpha
 
 1. Download the DMG and matching `.sha256` file from the GitHub prerelease.
-2. Optionally verify it with `shasum -a 256 -c TrackPinch-0.1.0-alpha.1.dmg.sha256`.
+2. Optionally verify it with `shasum -a 256 -c TrackPinch-0.1.0-alpha.2.dmg.sha256`.
 3. Open the DMG and drag `TrackPinch.app` to Applications.
 4. Launch TrackPinch and follow the permission setup shown in the menu bar app.
 
@@ -42,9 +41,8 @@ TrackPinch runs locally. It has no account, analytics, ads, update service, or
 network communication. The event tap observes modifier and precision-scroll
 events needed for the gesture; typed key contents are not recorded.
 
-Accessibility permission is used only to read and update the active window's
-size. Input Monitoring permission is required to recognize and suppress the
-configured gesture while TrackPinch owns it.
+Accessibility permission is used to read and update the active window's size
+and to recognize and suppress the configured gesture while TrackPinch owns it.
 
 ## Build from source
 
@@ -56,7 +54,7 @@ swift test
 Create an explicitly unnotarized experimental DMG:
 
 ```bash
-./script/build_release.sh --version 0.1.0-alpha.1 --allow-adhoc
+./script/build_release.sh --version 0.1.0-alpha.2 --build-number 2 --allow-adhoc
 ```
 
 A normal release build requires a Developer ID Application identity and a

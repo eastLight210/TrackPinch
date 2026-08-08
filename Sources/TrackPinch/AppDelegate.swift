@@ -32,11 +32,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         configureStatusItem()
         configurePopover()
 
-        refreshPermissions(retryUnavailableMonitor: false)
+        let initialPermissionState = refreshPermissions(
+            retryUnavailableMonitor: false
+        )
         eventTapProbe.setConfiguredModifiers(appModel.modifiers)
         eventTapProbe.setSuppressionEnabled(appModel.isEnabled)
         axLiveResizeController.setSensitivity(appModel.sensitivity)
-        eventTapProbe.start()
+        if initialPermissionState.accessibilityTrusted {
+            ensureEventTapRunning()
+        }
         refreshPermissionsOnTargetChange = true
 
         let shouldPresentOnboarding = !appModel.hasPresentedOnboarding
@@ -57,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        refreshPermissions()
+        checkPermissionsAndRetry()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -79,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private func showPopover(relativeTo button: NSStatusBarButton) {
+        resizePopoverToFitScreen(relativeTo: button)
         popover.show(
             relativeTo: button.bounds,
             of: button,
@@ -123,16 +128,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             self?.requestPermissionsAndRetry()
         }
         appModel.onOpenAccessibilitySettings = { [weak self] in
-            self?.openSettings(.accessibility)
-        }
-        appModel.onOpenInputMonitoringSettings = { [weak self] in
-            self?.openSettings(.inputMonitoring)
+            self?.openAccessibilitySettings()
         }
         appModel.onRefreshPermissions = { [weak self] in
             self?.checkPermissionsAndRetry()
         }
         appModel.onRetryEventTap = { [weak self] in
-            self?.eventTapProbe.retry()
+            self?.retryEventTapIfPermitted()
         }
         appModel.onRunAXProbe = { [weak self] in
             self?.runAXResizeProbe()
@@ -161,6 +163,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.delegate = self
         popover.contentViewController = NSHostingController(
             rootView: TrackPinchPopoverView(model: appModel)
+        )
+        popover.contentSize = NSSize(
+            width: PopoverSizePolicy.width,
+            height: PopoverSizePolicy.idealHeight
+        )
+    }
+
+    private func resizePopoverToFitScreen(
+        relativeTo button: NSStatusBarButton
+    ) {
+        let screen = button.window?.screen ?? NSScreen.main
+        let contentHeight = screen.map {
+            PopoverSizePolicy.contentHeight(
+                forVisibleFrameHeight: $0.visibleFrame.height
+            )
+        } ?? PopoverSizePolicy.idealHeight
+
+        popover.contentSize = NSSize(
+            width: PopoverSizePolicy.width,
+            height: contentHeight
         )
     }
 
@@ -193,75 +215,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         button.setAccessibilityValue(appModel.statusTitle)
     }
 
+    @discardableResult
     private func refreshPermissions(
         retryUnavailableMonitor: Bool = true
-    ) {
+    ) -> PermissionProbe.State {
         let state = PermissionProbe.state
         appModel.updatePermissions(state)
-        eventTapProbe.setPermissionState(
-            accessibilityTrusted: state.accessibilityTrusted,
-            inputListeningGranted: state.inputListeningGranted
-        )
+        eventTapProbe.setAccessibilityTrusted(state.accessibilityTrusted)
         if retryUnavailableMonitor,
-           state.accessibilityTrusted,
-           state.inputListeningGranted {
-            switch eventTapProbe.snapshot().health {
-            case .stopped, .unavailable:
-                eventTapProbe.retry()
-            case .starting, .running, .degraded:
-                break
-            }
+           state.accessibilityTrusted {
+            ensureEventTapRunning()
         }
         updateStatusItemAppearance()
+        return state
     }
 
     private func checkPermissionsAndRetry() {
-        refreshPermissions(retryUnavailableMonitor: false)
-        if appModel.accessibilityTrusted,
-           appModel.inputListeningGranted {
-            appModel.updatePermissionAction("Permissions granted")
-            eventTapProbe.retry()
+        let state = refreshPermissions(retryUnavailableMonitor: false)
+        if state.accessibilityTrusted {
+            appModel.updatePermissionAction("Accessibility granted")
+            ensureEventTapRunning()
         }
     }
 
     private func requestPermissionsAndRetry() {
-        let requestedState = PermissionProbe.request()
-        appModel.updatePermissions(requestedState)
-        eventTapProbe.setPermissionState(
-            accessibilityTrusted: requestedState.accessibilityTrusted,
-            inputListeningGranted: requestedState.inputListeningGranted
-        )
-        let missingPane = PermissionProbe.nextMissingPane(for: requestedState)
-        let openedSettings = missingPane.map(PermissionProbe.openSettings) ?? false
-
-        if let missingPane {
-            let paneName = missingPane == .accessibility
-                ? "Accessibility"
-                : "Input Monitoring"
-            appModel.updatePermissionAction(
-                openedSettings
-                    ? "Opened \(paneName) Settings"
-                    : "Could not open \(paneName) Settings"
-            )
-        } else {
-            appModel.updatePermissionAction("Permissions already granted")
+        let state = refreshPermissions(retryUnavailableMonitor: false)
+        if state.accessibilityTrusted {
+            appModel.updatePermissionAction("Accessibility already granted")
+            ensureEventTapRunning()
+            return
         }
 
-        eventTapProbe.retry()
+        _ = PermissionProbe.requestAccessibility()
+        appModel.updatePermissionAction("Requested Accessibility access")
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            self?.refreshPermissions()
+            self?.checkPermissionsAndRetry()
         }
     }
 
-    private func openSettings(_ pane: PermissionProbe.SettingsPane) {
-        let opened = PermissionProbe.openSettings(pane)
-        let paneName = pane == .accessibility
-            ? "Accessibility"
-            : "Input Monitoring"
+    private func ensureEventTapRunning() {
+        switch eventTapProbe.snapshot().health {
+        case .stopped:
+            eventTapProbe.start()
+        case .unavailable:
+            eventTapProbe.retry()
+        case .starting, .running, .degraded:
+            break
+        }
+    }
+
+    private func retryEventTapIfPermitted() {
+        let state = refreshPermissions(retryUnavailableMonitor: false)
+        guard state.accessibilityTrusted else {
+            appModel.updatePermissionAction("Accessibility required")
+            return
+        }
+        eventTapProbe.retry()
+    }
+
+    private func openAccessibilitySettings() {
+        let opened = PermissionProbe.openAccessibilitySettings()
         appModel.updatePermissionAction(
             opened
-                ? "Opened \(paneName) Settings"
-                : "Could not open \(paneName) Settings"
+                ? "Opened Accessibility Settings"
+                : "Could not open Accessibility Settings"
         )
     }
 

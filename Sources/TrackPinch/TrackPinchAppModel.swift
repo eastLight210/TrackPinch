@@ -17,7 +17,6 @@ final class TrackPinchAppModel: ObservableObject {
     @Published private(set) var hasPresentedOnboarding: Bool
     @Published private(set) var hasCompletedOnboarding: Bool
     @Published private(set) var accessibilityTrusted = false
-    @Published private(set) var inputListeningGranted = false
     @Published private(set) var eventTapHealth: EventTapProbe.Health = .stopped
     @Published private(set) var captureState = "Idle"
     @Published private(set) var targetAppName = "None"
@@ -32,7 +31,6 @@ final class TrackPinchAppModel: ObservableObject {
     var onModifiersChanged: ((NSEvent.ModifierFlags) -> Void)?
     var onRequestPermissions: (() -> Void)?
     var onOpenAccessibilitySettings: (() -> Void)?
-    var onOpenInputMonitoringSettings: (() -> Void)?
     var onRefreshPermissions: (() -> Void)?
     var onRetryEventTap: (() -> Void)?
     var onRunAXProbe: (() -> Void)?
@@ -54,7 +52,7 @@ final class TrackPinchAppModel: ObservableObject {
 
     var operationalState: OperationalState {
         guard isEnabled else { return .paused }
-        guard accessibilityTrusted, inputListeningGranted else {
+        guard accessibilityTrusted else {
             return .attention
         }
 
@@ -75,7 +73,7 @@ final class TrackPinchAppModel: ObservableObject {
         case .paused:
             return "Paused"
         case .attention:
-            return accessibilityTrusted && inputListeningGranted
+            return accessibilityTrusted
                 ? "Input needs attention"
                 : "Permissions required"
         case .starting:
@@ -84,7 +82,7 @@ final class TrackPinchAppModel: ObservableObject {
     }
 
     var permissionsReady: Bool {
-        accessibilityTrusted && inputListeningGranted
+        accessibilityTrusted
     }
 
     var modifierGlyphs: String {
@@ -159,7 +157,6 @@ final class TrackPinchAppModel: ObservableObject {
 
     func updatePermissions(_ state: PermissionProbe.State) {
         accessibilityTrusted = state.accessibilityTrusted
-        inputListeningGranted = state.inputListeningGranted
     }
 
     func updateEventTap(_ snapshot: EventTapProbe.Snapshot) {
@@ -191,10 +188,6 @@ final class TrackPinchAppModel: ObservableObject {
 
     func openAccessibilitySettings() {
         onOpenAccessibilitySettings?()
-    }
-
-    func openInputMonitoringSettings() {
-        onOpenInputMonitoringSettings?()
     }
 
     func refreshPermissions() {
