@@ -1,11 +1,15 @@
 # TrackPinch 제품 및 기술 명세
 
-- 상태: Phase 0 capability probe 구현 완료, signed manual QA 진행 중
-- 마지막 갱신: 2026-08-07
+- 상태: `v0.1.0-alpha.1` experimental prerelease, signed manual QA 진행 중
+- 마지막 갱신: 2026-08-08
 - 최소 배포 대상: macOS 14.0
 - 제품 bundle identifier: `dev.badgerworks.trackpinch`
 - 배포 방식: Developer ID로 서명하고 공증한 직접 배포
 - App Sandbox: 사용하지 않음
+
+`v0.1.0-alpha.1` DMG는 사용성 검증을 위한 예외적인 ad hoc signed,
+unnotarized preview다. 정식 release gate와 배포 방식은 아래 Developer ID,
+notarization, stapling 요구사항을 그대로 따른다.
 
 ## 1. 개요
 

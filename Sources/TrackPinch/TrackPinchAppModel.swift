@@ -99,6 +99,8 @@ final class TrackPinchAppModel: ObservableObject {
 
     var versionDescription: String {
         let version = Bundle.main.object(
+            forInfoDictionaryKey: "TrackPinchReleaseVersion"
+        ) as? String ?? Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
         ) as? String ?? "0.1.0"
         return "v\(version)"
