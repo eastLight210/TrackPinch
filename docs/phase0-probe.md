@@ -56,7 +56,7 @@ Developer ID Application으로 서명된 경우 다음 명령은 build 후 Gatek
 
 1. `Grant Missing Permissions`를 선택한다.
 2. 아직 허용되지 않은 첫 번째 권한의 System Settings pane이 열린다.
-3. System Settings에서 TrackPinch Phase 0을 허용한다.
+3. System Settings에서 TrackPinch를 허용한다.
 4. 다른 권한도 아직 허용되지 않았다면 `Grant Missing Permissions`를 다시 선택한다.
 5. 필요하면 각 권한 옆의 `Open Settings`로 해당 pane을 직접 연다.
 6. TrackPinch popover를 다시 열어 두 권한 상태를 확인한다.

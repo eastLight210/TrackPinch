@@ -13,8 +13,8 @@ let package = Package(
             targets: ["TrackPinchCore"]
         ),
         .executable(
-            name: "TrackPinchProbe",
-            targets: ["TrackPinchProbe"]
+            name: "TrackPinch",
+            targets: ["TrackPinch"]
         ),
     ],
     targets: [
@@ -22,7 +22,7 @@ let package = Package(
             name: "TrackPinchCore"
         ),
         .executableTarget(
-            name: "TrackPinchProbe",
+            name: "TrackPinch",
             dependencies: ["TrackPinchCore"]
         ),
         .testTarget(

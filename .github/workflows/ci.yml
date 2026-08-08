@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: swift test
+      - name: Check strict concurrency
+        run: >-
+          swift build --product TrackPinch
+          -Xswiftc -strict-concurrency=complete
+          -Xswiftc -warnings-as-errors
+      - name: Build release product
+        run: swift build --configuration release --product TrackPinch

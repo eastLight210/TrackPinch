@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-APP_NAME="TrackPinchProbe"
+APP_NAME="TrackPinch"
 BUNDLE_ID="dev.badgerworks.trackpinch"
 XCODE_VARIANT="${TRACKPINCH_XCODE:-beta}"
 
