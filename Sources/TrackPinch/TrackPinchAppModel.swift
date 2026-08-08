@@ -32,6 +32,7 @@ final class TrackPinchAppModel: ObservableObject {
     var onRequestPermissions: (() -> Void)?
     var onOpenAccessibilitySettings: (() -> Void)?
     var onRefreshPermissions: (() -> Void)?
+    var onShowOnboarding: (() -> Void)?
     var onRetryEventTap: (() -> Void)?
     var onRunAXProbe: (() -> Void)?
     var onQuit: (() -> Void)?
@@ -192,6 +193,10 @@ final class TrackPinchAppModel: ObservableObject {
 
     func refreshPermissions() {
         onRefreshPermissions?()
+    }
+
+    func showOnboarding() {
+        onShowOnboarding?()
     }
 
     func retryEventTap() {

@@ -9,11 +9,11 @@ window width, height, or both.
 
 ## Alpha status
 
-`v0.1.0-alpha.2` is an experimental preview intended to validate the core
+`v0.1.0-alpha.3` is an experimental preview intended to validate the core
 gesture, Accessibility behavior, and scroll suppression on real Macs. It is
 not the finished `v0.1.0` release.
 
-The first DMG is ad hoc signed and not notarized because a Developer ID
+The alpha DMG is ad hoc signed and not notarized because a Developer ID
 certificate is not yet available. Gatekeeper may block it. Do not disable
 Gatekeeper globally; if you choose to test the preview, use the per-app
 **Open Anyway** control in **System Settings → Privacy & Security** after the
@@ -28,9 +28,10 @@ first blocked launch.
 ## Install the alpha
 
 1. Download the DMG and matching `.sha256` file from the GitHub prerelease.
-2. Optionally verify it with `shasum -a 256 -c TrackPinch-0.1.0-alpha.2.dmg.sha256`.
+2. Optionally verify it with `shasum -a 256 -c TrackPinch-0.1.0-alpha.3.dmg.sha256`.
 3. Open the DMG and drag `TrackPinch.app` to Applications.
-4. Launch TrackPinch and follow the permission setup shown in the menu bar app.
+4. Launch TrackPinch and follow the first-run setup window. After setup,
+   TrackPinch stays in the menu bar without a Dock icon.
 
 Because this alpha is not notarized, macOS may require the per-app **Open
 Anyway** step described above.
@@ -54,7 +55,7 @@ swift test
 Create an explicitly unnotarized experimental DMG:
 
 ```bash
-./script/build_release.sh --version 0.1.0-alpha.2 --build-number 2 --allow-adhoc
+./script/build_release.sh --version 0.1.0-alpha.3 --build-number 3 --allow-adhoc
 ```
 
 A normal release build requires a Developer ID Application identity and a

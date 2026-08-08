@@ -396,7 +396,7 @@ tap health가 불확실하거나 degraded인 동안 TrackPinch는 event를 소�
 
 ## 14. 메뉴 막대와 설정
 
-AppKit `NSStatusItem`이 SwiftUI 설정 view를 담은 transient `NSPopover`를 표시한다. status item 표시와 popover lifecycle만 AppKit이 담당하고, 설정과 runtime 상태의 source of truth는 SwiftUI observable model에 둔다.
+AppKit `NSStatusItem`이 SwiftUI 설정 view를 담은 transient `NSPopover`를 표시한다. 첫 실행 setup은 별도의 single-instance onboarding window에서 진행한다. status item, popover 및 onboarding window lifecycle만 AppKit이 담당하고, 설정과 runtime 상태의 source of truth는 SwiftUI observable model에 둔다.
 
 ### 14.1 메뉴 기능
 
@@ -409,10 +409,12 @@ AppKit `NSStatusItem`이 SwiftUI 설정 view를 담은 transient `NSPopover`를 
 - 접을 수 있는 runtime diagnostics와 AX resize test
 - Quit
 
-첫 실행에서는 설정 popover를 한 번 자동으로 표시하고 다음 2단계 onboarding을 제공한다.
+첫 실행에서는 메뉴바와 독립적인 onboarding window를 한 번 자동으로 표시하고 다음 2단계 setup을 제공한다.
 
 1. Accessibility의 용도, 현재 승인 상태 및 Settings 진입
 2. modifier와 수평/수직/대각선 gesture 결과 안내
+
+onboarding window는 TrackPinch가 setup 이후 메뉴바에서 동작한다는 점을 명시한다. 완료하면 window를 닫고 설정 popover를 열어 menu bar 위치와 이후 진입점을 연결한다. 설정 popover의 `Setup Guide` action으로 언제든 window를 다시 열 수 있다.
 
 onboarding을 완료하기 전에도 status toggle과 diagnostics에는 접근할 수 있다. 권한이 준비되지 않은 동안에는 TrackPinch가 새 scroll sequence를 소비하지 않는다.
 
