@@ -24,7 +24,7 @@ struct TrackPinchOnboardingView: View {
             stepLabel("Step 1 of 2 · Permissions")
 
             Text(
-                "TrackPinch needs permission to recognize the selected gesture and resize the active window."
+                "TrackPinch needs Accessibility permission to recognize the selected gesture and resize the active window."
             )
             .font(.callout)
             .foregroundStyle(.secondary)
@@ -35,12 +35,6 @@ struct TrackPinchOnboardingView: View {
                 detail: "Resize the active window",
                 isGranted: model.accessibilityTrusted,
                 action: model.openAccessibilitySettings
-            )
-            SetupPermissionRow(
-                title: "Input Monitoring",
-                detail: "Recognize modifier and scroll events",
-                isGranted: model.inputListeningGranted,
-                action: model.openInputMonitoringSettings
             )
 
             Label {
@@ -55,6 +49,13 @@ struct TrackPinchOnboardingView: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
 
+            Text(
+                "Set Up Accessibility asks macOS to add TrackPinch to the privacy list. Enable its switch when prompted."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+
             HStack {
                 Button("Check Again") {
                     model.refreshPermissions()
@@ -63,7 +64,7 @@ struct TrackPinchOnboardingView: View {
 
                 Spacer()
 
-                Button("Grant Missing Permissions") {
+                Button("Set Up Accessibility") {
                     model.requestPermissions()
                 }
                 .buttonStyle(.borderedProminent)
@@ -182,8 +183,9 @@ private struct SetupPermissionRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Button("Open Settings", action: action)
+                Button("Settings…", action: action)
                     .controlSize(.small)
+                    .help("Use if the macOS permission request does not appear")
             }
         }
     }

@@ -1,13 +1,13 @@
 # TrackPinch 제품 및 기술 명세
 
-- 상태: `v0.1.0-alpha.1` experimental prerelease, signed manual QA 진행 중
+- 상태: `v0.1.0-alpha.2` experimental prerelease, signed manual QA 진행 중
 - 마지막 갱신: 2026-08-08
 - 최소 배포 대상: macOS 14.0
 - 제품 bundle identifier: `dev.badgerworks.trackpinch`
 - 배포 방식: Developer ID로 서명하고 공증한 직접 배포
 - App Sandbox: 사용하지 않음
 
-`v0.1.0-alpha.1` DMG는 사용성 검증을 위한 예외적인 ad hoc signed,
+`v0.1.0-alpha.2` DMG는 사용성 검증을 위한 예외적인 ad hoc signed,
 unnotarized preview다. 정식 release gate와 배포 방식은 아래 Developer ID,
 notarization, stapling 요구사항을 그대로 따른다.
 
@@ -71,27 +71,24 @@ MVP에서는 다음 항목을 지원하지 않는다.
 | Capability | 확인 API/동작 | 실패 시 제품 동작 |
 | --- | --- | --- |
 | AX trust | `AXIsProcessTrustedWithOptions` | TrackPinch disabled, 모든 입력 통과 |
-| Event listening | `CGPreflightListenEventAccess`, `CGRequestListenEventAccess` | TrackPinch disabled, 모든 입력 통과 |
 | Active event tap | 실제 `.defaultTap` 생성 | degraded 상태, 모든 입력 통과 |
 | Scroll suppression | callback에서 matching scroll에 `nil` 반환 | gate 실패 |
 | Modifier chord | `.flagsChanged`, scroll event flags와 session flags 비교 | 해당 chord를 기본값으로 확정하지 않음 |
 | AX resize | focused standard window의 size set/readback | gate 실패 또는 지원 범위 축소 |
 
-AX prompt와 listen-access prompt는 비동기다. prompt 요청의 return value를 승인 결과로 취급하지 않으며, 앱 활성화 notification과 명시적 `Check Again` 동작에서 상태를 다시 읽는다.
+AX prompt는 비동기다. prompt 요청의 return value를 승인 결과로 취급하지 않으며, 앱 활성화 notification과 명시적 `Check Again` 동작에서 상태를 다시 읽는다. Accessibility 승인은 event posting과 listening도 허용하므로 `CGPreflightListenEventAccess`를 별도 Input Monitoring 등록 상태로 해석하지 않는다. 권한 이후 실제 event tap 생성과 enable 여부를 runtime gate로 사용한다.
 
 ### 5.3 TCC test matrix
 
 다음 시나리오를 macOS 14, 15, 26에서 검증한다. 지원 대상 OS를 실제로 검증할 수 없다면 출시 전에 최소 배포 대상을 좁힌다. 개발 중인 차기 macOS beta는 정보성 smoke test이며 GA 전까지 release gate가 아니다.
 
-| 시나리오 | AX read/write | Event listen | Event suppress | 기대 UI |
+| 시나리오 | AX read/write | Active event tap | Event suppress | 기대 UI |
 | --- | --- | --- | --- | --- |
-| Clean install | 거부 | 거부 | 불가 | 두 권한을 구분해 안내 |
-| Prompt 거부 | 거부 | 거부 | 불가 | disabled, Retry 제공 |
-| Listen만 허용 | 거부 | 허용 | probe 결과 기록 | disabled |
-| AX만 허용 | 허용 여부 기록 | probe 결과 기록 | probe 결과 기록 | capability별 상태 표시 |
-| 필요한 권한 모두 허용 | 성공 | 성공 | 성공 | enabled 가능 |
+| Clean install | 거부 | 생성하지 않음 | 불가 | Accessibility 안내 |
+| Prompt 거부 | 거부 | 생성하지 않음 | 불가 | disabled, Retry 제공 |
+| Accessibility 허용 | 성공 | 생성 및 enable 확인 | 성공 | enabled 가능 |
 | 실행 중 권한 회수 | 이후 호출 실패 | tap disable/failure | 불가 | capture 취소 후 degraded |
-| 앱 update/relaunch | 승인 유지 여부 기록 | 승인 유지 여부 기록 | 성공 | 재승인 필요 여부 표시 |
+| 앱 update/relaunch | 승인 유지 여부 기록 | 생성 및 enable 확인 | 성공 | 재승인 필요 여부 표시 |
 
 clean user account를 우선 사용한다. TCC reset을 사용하는 경우에는 대상 bundle identifier와 변경되는 권한 범위를 QA 절차에 명시한다.
 
@@ -408,14 +405,13 @@ AppKit `NSStatusItem`이 SwiftUI 설정 view를 담은 transient `NSPopover`를 
 - modifier 설정
 - 0.5x부터 3.0x까지의 공통 sensitivity slider와 기본값 reset
 - Accessibility 상태
-- Input Listening 상태
 - Event Tap health와 retry
 - 접을 수 있는 runtime diagnostics와 AX resize test
 - Quit
 
 첫 실행에서는 설정 popover를 한 번 자동으로 표시하고 다음 2단계 onboarding을 제공한다.
 
-1. Accessibility와 Input Monitoring의 용도, 현재 승인 상태 및 Settings 진입
+1. Accessibility의 용도, 현재 승인 상태 및 Settings 진입
 2. modifier와 수평/수직/대각선 gesture 결과 안내
 
 onboarding을 완료하기 전에도 status toggle과 diagnostics에는 접근할 수 있다. 권한이 준비되지 않은 동안에는 TrackPinch가 새 scroll sequence를 소비하지 않는다.
@@ -647,7 +643,7 @@ TrackPinch는 AX position을 쓰지 않는다. 단일/복수 display와 서로 �
 - [Apple - NSEvent direction inversion](https://developer.apple.com/documentation/appkit/nsevent/isdirectioninvertedfromdevice)
 - [Apple - CGEventTapCreate](https://developer.apple.com/documentation/coregraphics/cgevent/tapcreate%28tap%3Aplace%3Aoptions%3Aeventsofinterest%3Acallback%3Auserinfo%3A%29)
 - [Apple - CGEvent tap locations](https://developer.apple.com/documentation/coregraphics/cgeventtaplocation)
-- [Apple - CG listen preflight](https://developer.apple.com/documentation/coregraphics/cgpreflightlisteneventaccess%28%29)
+- [Apple DTS - Accessibility grants event listening](https://developer.apple.com/forums/thread/828052)
 - [Apple - AX trust](https://developer.apple.com/documentation/applicationservices/1459186-axisprocesstrustedwithoptions)
 - [Apple - AXUIElement](https://developer.apple.com/documentation/applicationservices/axuielement_h)
 - [Apple - AX messaging timeout](https://developer.apple.com/documentation/applicationservices/1459345-axuielementsetmessagingtimeout)
