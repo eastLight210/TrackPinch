@@ -3,8 +3,8 @@ set -euo pipefail
 
 APP_NAME="TrackPinch"
 BUNDLE_ID="dev.badgerworks.trackpinch"
-VERSION="${TRACKPINCH_VERSION:-0.1.0-alpha.3}"
-BUILD_NUMBER="${TRACKPINCH_BUILD_NUMBER:-3}"
+VERSION="${TRACKPINCH_VERSION:-0.1.0-alpha.4}"
+BUILD_NUMBER="${TRACKPINCH_BUILD_NUMBER:-4}"
 ALLOW_ADHOC=0
 
 usage() {

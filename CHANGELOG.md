@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.0-alpha.4 - 2026-08-09
+
+Adds a recognizable macOS identity to the experimental preview.
+
+### Added
+
+- Pastel frosted-glass TrackPinch app icon
+- Reproducible icon rendering and `.icns` generation scripts
+
+### Changed
+
+- Include the app icon in local, universal, and DMG app bundles
+
+### Distribution
+
+- The prerelease DMG remains ad hoc signed and not notarized.
+
 ## 0.1.0-alpha.3 - 2026-08-08
 
 Improves first-launch clarity for a menu-bar-only app.
