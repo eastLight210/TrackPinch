@@ -65,8 +65,10 @@ DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
+APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST_SOURCE="$ROOT_DIR/Packaging/Info.plist"
+APP_ICON_SOURCE="$ROOT_DIR/Packaging/AppIcon.icns"
 DMG_PATH="$DIST_DIR/$APP_NAME-$VERSION.dmg"
 CHECKSUM_PATH="$DMG_PATH.sha256"
 
@@ -113,7 +115,7 @@ fi
 
 /bin/rm -rf "$APP_BUNDLE" "$STAGING_DIR"
 /bin/rm -f "$DMG_PATH" "$CHECKSUM_PATH" "$NOTARY_ZIP"
-/bin/mkdir -p "$APP_MACOS" "$STAGING_DIR"
+/bin/mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$STAGING_DIR"
 
 build_args=(
   --package-path "$ROOT_DIR"
@@ -129,6 +131,7 @@ BUILD_BINARY="$BUILD_BIN_DIR/$APP_NAME"
 
 /usr/bin/ditto "$BUILD_BINARY" "$APP_BINARY"
 /usr/bin/ditto "$INFO_PLIST_SOURCE" "$APP_CONTENTS/Info.plist"
+/usr/bin/ditto "$APP_ICON_SOURCE" "$APP_RESOURCES/AppIcon.icns"
 /bin/chmod +x "$APP_BINARY"
 
 /usr/bin/plutil -replace CFBundleExecutable -string "$APP_NAME" "$APP_CONTENTS/Info.plist"
